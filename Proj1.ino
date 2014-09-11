@@ -256,20 +256,16 @@ void loop()
   // Read incoming value from packet 6 (packet 6 = can I see ANY pixels I want?)
   cIR = analogRead(CENTER_IR_PIN);
   
-  if(stopped == 0){
+  //if(stopped == 0){
+   if (rightWheel.attached() == 1){
     if(packet[6] > 0 && cIR >= 275){
       //If the cone is immediately infront of me
-      stopped = 1;
+      //stopped = 1;
       rightWheel.detach();
       leftWheel.detach();      
      }
-    if(packet[6] > 0 && cIR < 275){
+    else if(packet[6] > 0 && cIR < 275){
       // If I can, drive straight
-      //NEED TO ATTACH?
-      // Attach servos
-      rightWheel.attach(10);
-      leftWheel.attach(11);
-      
       rightWheel.write(60);
       leftWheel.write(125);   
     }
@@ -286,12 +282,12 @@ void loop()
   }
   else{
     if(packet[6] > 0 && cIR >= 275){
-      stopped = 1;
+      rightWheel.detach();
+      leftWheel.detach();
     }
-    if(packet[6] > 0 && cIR < 275){
-      // If I can, drive straight
-      //NEED TO ATTACH?
-      stopped = 0;
+    else if(packet[6] > 0 && cIR < 275){
+      // If I can, drive straight with no cone infront
+
       // Attach servos
       rightWheel.attach(10);
       leftWheel.attach(11);
@@ -325,6 +321,8 @@ void loop()
   
   // Here is some debugging code which will print out the packets
   // received.
+  /*
+  
   Serial.print(packet[0], DEC);    // MEAN X
   Serial.print(" ");
   Serial.print(packet[1], DEC);    // MEAN Y
@@ -349,11 +347,14 @@ void loop()
   Serial.print(" ");
   Serial.print(rfIR, DEC);    // right front ir 
   Serial.print(" ");
+  */
   Serial.print(cIR, DEC);    // center ir 
-  Serial.print(" ");
+  Serial.println(" ");
+  /*
   Serial.print(lfIR, DEC);    // left facing ir 
   Serial.print(" ");
   Serial.println(lffIR, DEC);    // left front facing ir 
+  */
 }
 
 
