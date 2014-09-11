@@ -249,7 +249,35 @@ void loop()
   // Else it's probably just noise.
         
   cmucam2_get("TC 200 240 0 40 0 40", 'T', packet, false);
- 
+  
+  //WALL FOLLOWING
+  rffIR = analogRead(RIGHT_FRONT_FACING_IR_PIN);
+  rfIR = analogRead(RIGHT_FACING_IR_PIN);
+  //cIR = analogRead(CENTER_IR_PIN);
+  lfIR = analogRead(LEFT_FACING_IR_PIN);
+  lffIR = analogRead(LEFT_FRONT_FACING_IR_PIN);
+  
+  if(rffIR < 250 || lffIR < 250){
+  //right front facing, right front, left front, left front facing
+    rightWheel.write(60);
+    leftWheel.write(125);     
+    
+  }
+  if(rffIR >= 250){
+    //wall found on the left side of the bot
+    rightWheel.detach();
+    leftWheel.detach();
+  }
+  if(lffIR >= 250){
+    //wall found on the right side of the bot
+    rightWheel.detach();
+    leftWheel.detach();
+  }
+  
+  
+  
+  
+/*
   //CODE FOR CONE TRACKING
   // Read incoming value from packet 6 (packet 6 = can I see ANY pixels I want?)
   cIR = analogRead(CENTER_IR_PIN);
@@ -307,7 +335,7 @@ void loop()
     } 
   }
 
-
+*/
 
   // Read values from IR sensors
   rffIR = analogRead(RIGHT_FRONT_FACING_IR_PIN);
