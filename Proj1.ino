@@ -27,6 +27,9 @@ int cIR = 0;
 int lfIR = 0;
 int lffIR = 0;
 
+//int to check if stopped
+int stopped = 0;
+
 // Global variables to count wheel watcher tics
 int rightWW, leftWW;
 
@@ -251,22 +254,67 @@ void loop()
   cmucam2_get("TC 200 240 0 40 0 40", 'T', packet, false);
   
   // Read incoming value from packet 6 (packet 6 = can I see ANY pixels I want?)
-  if(packet[6] > 0){
-    // If I can, drive straight
-    rightWheel.write(60);
-    //leftWheel.write(120);
-    leftWheel.write(125);
+  cIR = analogRead(CENTER_IR_PIN);
+  
+  if(stopped == 0){
+    if(packet[6] > 0 && cIR >= 275){
+      //If the cone is immediately infront of me
+      stopped = 1;
+      rightWheel.detach();
+      leftWheel.detach();      
+     }
+    if(packet[6] > 0 && cIR < 275){
+      // If I can, drive straight
+      //NEED TO ATTACH?
+      // Attach servos
+      rightWheel.attach(10);
+      leftWheel.attach(11);
+      
+      rightWheel.write(60);
+      leftWheel.write(125);   
+    }
+    else{
+      // No blob found start looking for a blob
+      tickCounter = rightWW;
+      tickCounter2 = tickCounter + 15;
+        while(tickCounter<tickCounter2){
+          rightWheel.write(30);
+          leftWheel.write(0);
+          tickCounter++;
+       }
+    }      
   }
   else{
-  // No blob found start looking for a blob
-    tickCounter = rightWW;
-    tickCounter2 = tickCounter + 15;
-      while(tickCounter<tickCounter2){
-        rightWheel.write(60);
-        tickCounter++;
-      }
-  
+    if(packet[6] > 0 && cIR >= 275){
+      stopped = 1;
+    }
+    if(packet[6] > 0 && cIR < 275){
+      // If I can, drive straight
+      //NEED TO ATTACH?
+      stopped = 0;
+      // Attach servos
+      rightWheel.attach(10);
+      leftWheel.attach(11);
+      
+      rightWheel.write(60);
+      leftWheel.write(125);   
+    }
+    else{
+      // No blob found start looking for a blob
+      tickCounter = rightWW;
+      tickCounter2 = tickCounter + 15;    
+      stopped = 0;
+      // Attach servos
+      rightWheel.attach(10);
+      leftWheel.attach(11);
+        while(tickCounter<tickCounter2){
+          rightWheel.write(30);
+          leftWheel.write(0);
+          tickCounter++;
+       }
+    } 
   }
+
 
   // Read values from IR sensors
   rffIR = analogRead(RIGHT_FRONT_FACING_IR_PIN);
