@@ -249,65 +249,61 @@ void loop()
   // Else it's probably just noise.
         
   cmucam2_get("TC 200 240 0 40 0 40", 'T', packet, false);
- 
-  //CODE FOR CONE TRACKING
-  // Read incoming value from packet 6 (packet 6 = can I see ANY pixels I want?)
-  cIR = analogRead(CENTER_IR_PIN);
   
-   if (rightWheel.attached() == 1){
-    if(packet[6] > 0 && cIR >= 250){
-      //If the cone is immediately infront of me
-      rightWheel.detach();
-      leftWheel.detach();      
-     }
-    else if(packet[6] > 0 && cIR < 250){
-      // If I can, drive straight
-      rightWheel.write(60);
-      leftWheel.write(125);   
-    }
-    else{
-      // No blob found start looking for a blob
-      tickCounter = rightWW;
-      tickCounter2 = tickCounter + 15;
-        while(tickCounter<tickCounter2){
-          rightWheel.write(30);
-          leftWheel.write(0);
-          tickCounter++;
-       }
-    }      
+  //WALL FOLLOWING
+  rffIR = analogRead(RIGHT_FRONT_FACING_IR_PIN);
+  rfIR = analogRead(RIGHT_FACING_IR_PIN);
+  //cIR = analogRead(CENTER_IR_PIN);
+  lfIR = analogRead(LEFT_FACING_IR_PIN);
+  lffIR = analogRead(LEFT_FRONT_FACING_IR_PIN);
+  /*
+  Serial.println(rffIR, DEC);
+  Serial.println(rfIR, DEC);
+  Serial.println(cIR, DEC);
+  Serial.println(lfIR, DEC);
+  Serial.println(lffIR, DEC);
+  */
+
+  if(rffIR >= 250 && lfIR < 150){
+  //if the right front finds a wall and left doesnt
+    Serial.print("rffIR: ");
+    Serial.println(rffIR, DEC);
+    Serial.print("lfIR: ");
+    Serial.println(lfIR, DEC);
+    Serial.println(" ");
   }
-  else{
-    if(packet[6] > 0 && cIR >= 250){
-      rightWheel.detach();
-      leftWheel.detach();
-    }
-    else if(packet[6] > 0 && cIR < 250){
-      // If I can, drive straight with no cone infront
+  if(lffIR >= 250 && rfIR < 150){
+  //if the left front finds a wall and the right doesnt
+    //Serial.println(" ");
 
-      // Attach servos
-      rightWheel.attach(10);
-      leftWheel.attach(11);
-      
-      rightWheel.write(60);
-      leftWheel.write(125);   
-    }
-    else{
-      // No blob found start looking for a blob
-      tickCounter = rightWW;
-      tickCounter2 = tickCounter + 15;    
-      stopped = 0;
-      // Attach servos
-      rightWheel.attach(10);
-      leftWheel.attach(11);
-        while(tickCounter<tickCounter2){
-          rightWheel.write(30);
-          leftWheel.write(0);
-          tickCounter++;
-       }
-    } 
   }
+  if(rffIR >= 250 && lfIR >= 150){
+  //if right front and the left find a wall
+    //Serial.println(" ");
 
+  }
+  if(lffIR >= 250 && rfIR >= 150){
+  //if the left front and the right find a wall
+    //Serial.println(" ");
 
+  }
+  if(rffIR < 250 && lfIR >= 150){
+  //if on the left finds a wall and the right front doesnt
+    //Serial.println(" ");
+
+  }
+  if(lffIR < 250 && rfIR >= 150){
+  //if only the right finds a wall and the left front doesnt
+    //Serial.println(" ");
+
+  }
+  if(rffIR < 250 || lffIR < 250){
+    //niether front finds a wall
+    //Serial.println(" ");
+    //rightWheel.write(60);
+    //leftWheel.write(120);         
+  }
+ 
 
   // Read values from IR sensors
   rffIR = analogRead(RIGHT_FRONT_FACING_IR_PIN);
@@ -319,6 +315,7 @@ void loop()
   // Here is some debugging code which will print out the packets
   // received.
   /*
+  
   
   Serial.print(packet[0], DEC);    // MEAN X
   Serial.print(" ");
@@ -339,17 +336,18 @@ void loop()
   Serial.print(leftWW, DEC);       // left wheel ticks
   Serial.print(" RW ");
   Serial.print(rightWW, DEC);    // right wheel ticks
-  Serial.print(" ");
-  Serial.print(rffIR, DEC);    // right front facing ir 
-  Serial.print(" ");
-  Serial.print(rfIR, DEC);    // right front ir 
-  Serial.print(" ");
   */
+  //Serial.print("right front facing ir ");
+  //Serial.println(rffIR, DEC);    // right front facing ir 
+ /* Serial.print("right front ir ");
+  Serial.print(rfIR, DEC);    // right front ir 
+  Serial.print("center ir ");
+  
   Serial.print(cIR, DEC);    // center ir 
-  Serial.println(" ");
-  /*
+  Serial.println("left facing ir ");
+
   Serial.print(lfIR, DEC);    // left facing ir 
-  Serial.print(" ");
+  Serial.print("left front facing ir ");
   Serial.println(lffIR, DEC);    // left front facing ir 
   */
 }
