@@ -21,6 +21,17 @@ const int CENTER_IR_PIN = 2;
 const int LEFT_FACING_IR_PIN = 3;
 const int LEFT_FRONT_FACING_IR_PIN = 4;
 
+int wallFound = 0;
+
+int left_turn_left = 99;
+int left_turn_right = 40;
+
+int right_turn_left = 90;
+int right_turn_right = 70;
+
+int move_foward_left = 100 ;
+int move_foward_right = 80;
+
 int rffIR = 0;
 int rfIR = 0;
 int cIR = 0;
@@ -256,6 +267,9 @@ void loop()
   //cIR = analogRead(CENTER_IR_PIN);
   lfIR = analogRead(LEFT_FACING_IR_PIN);
   lffIR = analogRead(LEFT_FRONT_FACING_IR_PIN);
+  
+  
+  
   /*
   Serial.println(rffIR, DEC);
   Serial.println(rfIR, DEC);
@@ -275,21 +289,34 @@ void loop()
   if(lffIR >= 250 && rfIR < 150){
   //if the left front finds a wall and the right doesnt
     //Serial.println(" ");
-
   }
-  if(rffIR >= 250 && lfIR >= 150){
+
+  
+  if(wallFound == 1 && cIR >= 225){
+   //if following a wall and encounters an inside curve 
+      rightWheel.write(60);
+      leftWheel.write(0);
+    }
+  
+  if(rffIR >= 200 && lfIR >= 150){
   //if right front and the left find a wall
     //Serial.println(" ");
-
+    wallFound = 1;
+    rightWheel.write(move_foward_right);
+    leftWheel.write(move_foward_left); 
   }
   if(lffIR >= 250 && rfIR >= 150){
   //if the left front and the right find a wall
     //Serial.println(" ");
 
+
   }
   if(rffIR < 250 && lfIR >= 150){
   //if on the left finds a wall and the right front doesnt
     //Serial.println(" ");
+    
+    rightWheel.write(move_foward_right);
+    leftWheel.write(move_foward_left);
 
   }
   if(lffIR < 250 && rfIR >= 150){
@@ -297,12 +324,78 @@ void loop()
     //Serial.println(" ");
 
   }
-  if(rffIR < 250 || lffIR < 250){
+
+  
+  if(rffIR > 250 && lfIR >= 150){
+      wallFound = 1;
+      rightWheel.write(move_foward_right);
+      leftWheel.write(move_foward_left);
+  }
+  
+  if(rffIR < 250 && lffIR < 250 && lfIR < 150 && rfIR < 150){
     //niether front finds a wall
     //Serial.println(" ");
     //rightWheel.write(60);
-    //leftWheel.write(120);         
+    //leftWheel.write(120); 
+    
+    //and hasnt found a wall yet
+    if(wallFound == 0){
+      //search for wall
+      
+      rightWheel.write(move_foward_right);
+      leftWheel.write(move_foward_left);
+    }
+    
+    //and has already found a wall
+    if(wallFound == 1){
+      //turn left
+      
+      tickCounter = rightWW;
+      tickCounter2 = tickCounter + 15;
+      
+      while(tickCounter < tickCounter2){
+        rightWheel.write(left_turn_right);
+        leftWheel.write(left_turn_left);
+        tickCounter++;
+      }
+      
+
+    }
+        
   }
+  
+  /*
+  if(rffIR < 250 && lffIR < 150 ){
+    //niether front finds a wall
+    //Serial.println(" ");
+    //rightWheel.write(60);
+    //leftWheel.write(120); 
+    
+    //and hasnt found a wall yet
+    if(wallFound == 0){
+      //search for wall
+      
+      rightWheel.write(60);
+      leftWheel.write(120);
+    }
+    
+    //and has already found a wall
+    if(wallFound == 1){
+      //turn left
+      
+      tickCounter = rightWW;
+      tickCounter2 = tickCounter + 15;
+      
+      while(tickCounter < tickCounter2){
+        rightWheel.write(40);
+        leftWheel.write(99);
+        tickCounter++;
+      }
+      
+
+    }
+        
+  }*/
  
 
   // Read values from IR sensors
