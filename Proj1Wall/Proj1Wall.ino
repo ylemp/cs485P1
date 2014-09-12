@@ -26,8 +26,8 @@ int wallFound = 0;
 int left_turn_left = 99;
 int left_turn_right = 40;
 
-int right_turn_left = 90;
-int right_turn_right = 70;
+int right_turn_left = 140;
+int right_turn_right = 81;
 
 int move_foward_left = 100 ;
 int move_foward_right = 80;
@@ -264,7 +264,7 @@ void loop()
   //WALL FOLLOWING
   rffIR = analogRead(RIGHT_FRONT_FACING_IR_PIN);
   rfIR = analogRead(RIGHT_FACING_IR_PIN);
-  //cIR = analogRead(CENTER_IR_PIN);
+  cIR = analogRead(CENTER_IR_PIN);
   lfIR = analogRead(LEFT_FACING_IR_PIN);
   lffIR = analogRead(LEFT_FRONT_FACING_IR_PIN);
   
@@ -292,13 +292,13 @@ void loop()
   }
 
   
-  if(wallFound == 1 && cIR >= 225){
+  if(wallFound == 1 && cIR >= 150){
    //if following a wall and encounters an inside curve 
-      rightWheel.write(60);
-      leftWheel.write(0);
+      rightWheel.write(100);
+      leftWheel.write(120);
     }
   
-  if(rffIR >= 200 && lfIR >= 150){
+  if(rffIR >= 200 && lfIR >= 150 && cIR < 150){
   //if right front and the left find a wall
     //Serial.println(" ");
     wallFound = 1;
@@ -361,6 +361,17 @@ void loop()
       
 
     }
+  }
+   if(rffIR > 300 || lfIR > 200){
+     
+     tickCounter = rightWW;
+     tickCounter2 = tickCounter + 15;
+      
+      while(tickCounter < tickCounter2){
+        rightWheel.write(right_turn_right);
+        leftWheel.write(right_turn_left);
+        tickCounter++;
+   }
         
   }
   
