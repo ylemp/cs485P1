@@ -1,3 +1,22 @@
+
+
+/***
+****  INSTRUCTIONS FOR USE OF THIS FILE
+****  This file is meant for the AltSoftSerial library.  This library requires
+****  that the transmit pin (green wire) be moved to pin *9* (displacing the camera servo),
+****  and that the right wheel servo (pin 10) be moved to pin *6* (displacing the
+****  gripper servo)
+****
+****  You also have to install the AltSoftSerial library which you can get here:
+****  https://www.pjrc.com/teensy/arduino_libraries/AltSoftSerial.zip
+****
+****  After this change, you will find Robot 2 to work great.  Maybe other robots
+****  as well!  -- Sean
+****
+*/
+
+
+
 /* MUCH OF THIS CODE IS STOLEN FROM 
  * https://github.com/pickle27/arduino_cmucam2/blob/master/cmucam2/cmucam2.ino
  * http://kevinhughes.ca/2013/07/17/how-to-use-the-cmu-cam2-with-the-arduino/
@@ -6,11 +25,13 @@
 
 #include <SoftwareSerial.h>
 #include <SoftwareServo.h>
+#include <AltSoftSerial.h>
 
+#define ALTSERIAL 1
 
 // Microcontroller pin set up
 const int RX = 8;
-const int TX = 7;
+const int TX = 9;
 const int RIGHT_ENCODER_PIN = 5;
 const int LEFT_ENCODER_PIN = 4;
 const int INTERRUPT_1 = 0;
@@ -48,22 +69,17 @@ SoftwareServo rightWheel;
 SoftwareServo leftWheel;
 
 // Serial comm set up for CMU cam 2
-SoftwareSerial cmucam(RX, TX);
+#ifdef ALTSERIAL
+AltSoftSerial cmucam; 
+#else
+SoftwareSerial cmucam(RX,TX);
+#endif
 unsigned char RcvData[8] = "";
 unsigned char packet[8];
 
-/* 
- * Function to print the data packet
- */
-void print_packet(unsigned char * packet)
-{
-  for(int i = 0; i < 8; i++)
-  {
-     Serial.print( (int)packet[i] );
-     Serial.print(" "); 
-  }
-  Serial.println();
-}
+
+
+
 
 /* 
  * Function for sending commands to the CMU Cam2
@@ -80,28 +96,74 @@ boolean cmucam2_set(char* cmd, boolean verbose=false)
     Serial.print(cmd);
     Serial.println();
   }
-
   // send the command
   cmucam.print(cmd);
-  cmucam.print("\r");
-  cmucam.listen();
+  //cmucam.print("\r");
+  cmucam.write(13);
+  cmucam.flush();
 
   boolean ack = false;
 
-  if(verbose)
-    Serial.print("++> ");
+    if(verbose)
+      {
+      Serial.print("++>");
+      }
+
+
+#define ___ 0
+#define __A 1
+#define __C 2
+#define __K 3
+#define __R 4
+#define __O 5
+
+  int v = ___;
 
   // get the response
+  delay(25);
   while( cmucam.available() > 0 ) 
   {
     char inbyte = cmucam.read();
-    
-    if(inbyte == ':')
-      ack = true;  
 
+    if (inbyte == 'A')
+      {
+      v = __A;
+      }
+    else if (inbyte == 'C' && v == __A)
+      {
+      v = __C;
+      }
+    else if (inbyte == 'K' && v == __C)
+      {
+      v = __K;
+      }
+    else if (inbyte == '\r' && v == __K)
+      {
+      v = __R;
+      }
+    else if (inbyte == ':' && v == __R)
+      {
+      ack = true;
+      v = __O ;
+      }
+    else if (v == __R)
+      {
+      }
+    else 
+      {
+        //Serial.write("?");
+        //Serial.print(inbyte, DEC);
+        //Serial.write("!");
+        v = ___;
+      }
+    
     if(verbose)
+      {
       Serial.write(inbyte);
-  }
+      Serial.print(v, DEC);
+      }
+   delay(5);
+   }
 
   if(verbose)
     Serial.println();
@@ -109,6 +171,9 @@ boolean cmucam2_set(char* cmd, boolean verbose=false)
   // flush
   while( cmucam.available() > 0 )
     cmucam.read();
+
+ // if (cmucam.overflow())
+ //  Serial.println("SoftwareSerial overflow!"); 
 
   return ack;
 }
@@ -135,25 +200,12 @@ boolean cmucam2_get(char* cmd, char packet, unsigned char *rtrn, boolean verbose
 
   // send the command
   cmucam.print(cmd);
-  cmucam.print("\r");
-  cmucam.listen();
+  cmucam.write(13);
+  //cmucam.print("\r");
+  cmucam.flush();
+  //cmucam.listen();
 
-  // Debug Packet
-  // Change to true and
-  // turn of raw mode "RM 0"
-  // to see the packet
-  boolean debug = false;
-  if(debug) 
-  {
-    while(cmucam.available() > 0)
-    {
-      delay(100);
-      Serial.print((char)cmucam.read());    
-    }
-    Serial.println();
-    
-    return true;
-  }
+  delay(25);
 
   // S-Packet
   // raw mode must be on
@@ -168,21 +220,58 @@ boolean cmucam2_get(char* cmd, char packet, unsigned char *rtrn, boolean verbose
     }
   }
 
+#define ___ (-2)
+#define __T (-1)
+
   // T-Packet
   // raw mode must be on
+  int v = ___;
+  
   if(packet == 'T')
   {
-    while(cmucam.read() != 255); // wait for signal bit
-    while(cmucam.read() != 84); 
-    while(cmucam.available() < 8); // wait for data
-    for(int i = 0; i < 8; i++) // read the packet
+    while( cmucam.available() > 0 ) 
     {
-      rtrn[i] = cmucam.read();    
+      char inbyte = cmucam.read();
+      if (inbyte == 255 && v == ___)
+        {
+          v = __T;
+        }
+      else if (inbyte == 'T' && v == __T)
+        {
+          v = 0;
+        }
+      else if (v >= 0 && v < 8)
+        {
+        rtrn[v] = inbyte;
+        v++;
+        }
+      else
+        {
+          v = ___;  // error
+        }
     }
+    if (v == 8)
+      return true;
+    else 
+      return false;
   }
+      
+//    while(cmucam.read() != 255); // wait for signal bit
+//    while(cmucam.read() != 84); 
+//    while(cmucam.available() < 8); // wait for data
+//    for(int i = 0; i < 8; i++) // read the packet
+//    {
+//      rtrn[i] = cmucam.read();    
+//    }
+//  }
+
+  //if (cmucam.overflow())
+  // Serial.println("SoftwareSerial overflow!"); 
 
   return true;  
-}
+  }
+
+
 
 void _updateRightEncoder() {
   int8_t adjustment = (((digitalRead(RIGHT_ENCODER_PIN) ^ 0)<<1)-1);
@@ -203,35 +292,49 @@ void setup()
   attachInterrupt(INTERRUPT_2, _updateRightEncoder, FALLING);  
   
   // Attach servos
+#ifdef ALTSERIAL
+  rightWheel.attach(6);
+#else
   rightWheel.attach(10);
+#endif
   leftWheel.attach(11);
   
   // CMU cam 2 init  
-  cmucam.begin(9600);
-  cmucam.print("RS"); 
-  cmucam.print("\r");
-  cmucam.print("RS"); 
-  cmucam.print("\r");
+  cmucam.begin(57600);
+  cmucam.write("\xff") ;  // write a dummy character to fix setTX bug
+  delay(500);
   cmucam.listen();
+  cmucam.print("RS"); 
+  cmucam.print("\r");
+  cmucam.print("RS"); 
+  cmucam.print("\r");
+  
+  delay(25);
   while( cmucam.available() > 0 ) 
   {
     cmucam.read();
+    delay(5);
   }
-  delay(100);
+
   while(!cmucam2_set("RS", true));
+  Serial.println("RS Done");
   // End Init CMU Cam2
 
   // Turn OFF Auto Gain
   while(!cmucam2_set("CR 19 33", true));
+  Serial.println("CR 19 33 Done");
 	
   // Turn OFF Auto White Balance (this is unnecessary since it's the default)
   while(!cmucam2_set("CR 18 40", true));
+  Serial.println("CR 18 40 Done");
 	
   // Turn ON Poll Mode
   while(!cmucam2_set("PM 1", true));
+  Serial.println("PM 1 Done");
 
   // Turn ON Raw Mode
   while(!cmucam2_set("RM 1", true));
+  Serial.println("RM 1 Done");
 
 }
 
