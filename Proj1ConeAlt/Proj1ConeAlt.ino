@@ -1,3 +1,5 @@
+#include <AltSoftSerial.h>
+
 
 
 /***
@@ -42,17 +44,6 @@ const int CENTER_IR_PIN = 2;
 const int LEFT_FACING_IR_PIN = 3;
 const int LEFT_FRONT_FACING_IR_PIN = 4;
 
-int wallFound = 0;
-
-int left_turn_left = 95;
-int left_turn_right = 60;
-
-int right_turn_left = 140-20-10;
-int right_turn_right = 85;
-
-int move_foward_left = 100-5;
-int move_foward_right = 80+5-4;
-
 int rffIR = 0;
 int rfIR = 0;
 int cIR = 0;
@@ -79,8 +70,6 @@ unsigned char packet[8];
 
 
 
-
-
 /* 
  * Function for sending commands to the CMU Cam2
  * where no return data aside from the 'ACK' 
@@ -101,6 +90,10 @@ boolean cmucam2_set(char* cmd, boolean verbose=false)
   //cmucam.print("\r");
   cmucam.write(13);
   cmucam.flush();
+  SoftwareServo::refresh();
+  delay(30);
+  SoftwareServo::refresh();
+  delay(30);
 
   boolean ack = false;
 
@@ -120,10 +113,9 @@ boolean cmucam2_set(char* cmd, boolean verbose=false)
   int v = ___;
 
   // get the response
-  delay(25);
   while( cmucam.available() > 0 ) 
   {
-    char inbyte = cmucam.read();
+    unsigned char inbyte = cmucam.read();
 
     if (inbyte == 'A')
       {
@@ -162,7 +154,7 @@ boolean cmucam2_set(char* cmd, boolean verbose=false)
       Serial.write(inbyte);
       Serial.print(v, DEC);
       }
-   delay(5);
+   //delay(5);
    }
 
   if(verbose)
@@ -189,7 +181,7 @@ boolean cmucam2_set(char* cmd, boolean verbose=false)
  * The verbose option will print out exactly what 
  * is sent and recieved from the CMU Cam2
  */
-boolean cmucam2_get(char* cmd, char packet, unsigned char *rtrn, boolean verbose=false)
+boolean cmucam2_get(char* cmd, char in, unsigned char *rtrn, boolean verbose=false)
 {
   if(verbose)
   {
@@ -201,15 +193,15 @@ boolean cmucam2_get(char* cmd, char packet, unsigned char *rtrn, boolean verbose
   // send the command
   cmucam.print(cmd);
   cmucam.write(13);
-  //cmucam.print("\r");
   cmucam.flush();
-  //cmucam.listen();
-
-  delay(25);
+  SoftwareServo::refresh();
+  delay(30);
+  SoftwareServo::refresh();
+  delay(30);
 
   // S-Packet
   // raw mode must be on
-  if(packet == 'S')
+  if(in == 'S')
   {
     while(cmucam.read() != 255); // wait for signal bit
     while(cmucam.read() != 83);
@@ -227,12 +219,17 @@ boolean cmucam2_get(char* cmd, char packet, unsigned char *rtrn, boolean verbose
   // raw mode must be on
   int v = ___;
   
-  if(packet == 'T')
+  if(in == 'T')
   {
+    for(int i = 0; i < 8; i++) rtrn[i] = 0;
     while( cmucam.available() > 0 ) 
     {
-      char inbyte = cmucam.read();
-      if (inbyte == 255 && v == ___)
+      unsigned char inbyte = cmucam.read();
+      if (inbyte == 0xFD && v < 0)
+        {
+          // just skip, it's probably a previous -3 byte terminating an older T packet
+        }
+      else if (inbyte == 0xFF && v == ___)
         {
           v = __T;
         }
@@ -244,30 +241,17 @@ boolean cmucam2_get(char* cmd, char packet, unsigned char *rtrn, boolean verbose
         {
         rtrn[v] = inbyte;
         v++;
+        if (v == 8) return true;  // all done, skip the next byte, which should be a 0xfd
         }
       else
         {
           v = ___;  // error
         }
+   //delay(5);
     }
-    if (v == 8)
-      return true;
-    else 
-      return false;
+  return false;
   }
       
-//    while(cmucam.read() != 255); // wait for signal bit
-//    while(cmucam.read() != 84); 
-//    while(cmucam.available() < 8); // wait for data
-//    for(int i = 0; i < 8; i++) // read the packet
-//    {
-//      rtrn[i] = cmucam.read();    
-//    }
-//  }
-
-  //if (cmucam.overflow())
-  // Serial.println("SoftwareSerial overflow!"); 
-
   return true;  
   }
 
@@ -283,10 +267,73 @@ void _updateLeftEncoder() {
   leftWW += adjustment;
 }
 
+
+
+void resetCamera()
+  {
+    while(true)
+    {
+    // CMU cam 2 init  
+    cmucam.print("RS"); 
+    cmucam.print("\r");
+    cmucam.print("RS"); 
+    cmucam.print("\r");
+    cmucam.print("RS"); 
+    cmucam.print("\r");
+    
+    delay(25);
+    while( cmucam.available() > 0 ) 
+    {
+      cmucam.read();
+      delay(5);
+    }
+  
+    int i;
+    
+    // Turn OFF Auto Gain
+    for(i = 0; i < 10; i++)
+      if (cmucam2_set("RS", true)) break;
+    if (i == 10) continue;  // uh oh 
+    Serial.println("RS Done");
+
+    // Turn OFF Auto Gain
+    for(i = 0; i < 10; i++)
+      if (cmucam2_set("CR 19 33", true)) break;
+    if (i == 10) continue;  // uh oh 
+    Serial.println("CR 19 33 Done");
+  	
+    // Turn OFF Auto White Balance (this is unnecessary since it's the default)
+    for(i = 0; i < 10; i++)
+      if (cmucam2_set("CR 18 40", true)) break;
+    if (i == 10) continue;  // uh oh 
+    Serial.println("CR 18 40 Done");
+  	
+    // Turn ON Poll Mode
+    for(i = 0; i < 10; i++)
+      if (cmucam2_set("PM 1", true)) break;
+    if (i == 10) continue;  // uh oh 
+    Serial.println("PM 1 Done");
+  
+    // Turn ON Raw Mode
+    for(i = 0; i < 10; i++)
+      if(cmucam2_set("RM 1", true)) break;
+    if (i == 10) continue;  // uh oh 
+    Serial.println("RM 1 Done");
+    
+    break;
+    }
+  }
+
+
+
 void setup()
 {
   Serial.begin(115200);
-    
+  cmucam.begin(57600);
+  cmucam.write("\xff") ;  // write a dummy character to fix setTX bug
+  delay(500);
+  cmucam.listen();
+  
   // Attach the wheel watchers
   attachInterrupt(INTERRUPT_1, _updateLeftEncoder, FALLING); 
   attachInterrupt(INTERRUPT_2, _updateRightEncoder, FALLING);  
@@ -299,48 +346,12 @@ void setup()
 #endif
   leftWheel.attach(11);
   
-  // CMU cam 2 init  
-  cmucam.begin(57600);
-  cmucam.write("\xff") ;  // write a dummy character to fix setTX bug
-  delay(500);
-  cmucam.listen();
-  cmucam.print("RS"); 
-  cmucam.print("\r");
-  cmucam.print("RS"); 
-  cmucam.print("\r");
-  
-  delay(25);
-  while( cmucam.available() > 0 ) 
-  {
-    cmucam.read();
-    delay(5);
-  }
-
-  while(!cmucam2_set("RS", true));
-  Serial.println("RS Done");
-  // End Init CMU Cam2
-
-  // Turn OFF Auto Gain
-  while(!cmucam2_set("CR 19 33", true));
-  Serial.println("CR 19 33 Done");
-	
-  // Turn OFF Auto White Balance (this is unnecessary since it's the default)
-  while(!cmucam2_set("CR 18 40", true));
-  Serial.println("CR 18 40 Done");
-	
-  // Turn ON Poll Mode
-  while(!cmucam2_set("PM 1", true));
-  Serial.println("PM 1 Done");
-
-  // Turn ON Raw Mode
-  while(!cmucam2_set("RM 1", true));
-  Serial.println("RM 1 Done");
-
+  resetCamera();
 }
 
 void loop()
 {
-  SoftwareServo::refresh();
+   SoftwareServo::refresh();
   // You must have this. This function needs to be called every 50ms in order to write new values to the servos.
   // If your loop function gets to big you will need to add more refresh()
 
@@ -363,91 +374,66 @@ void loop()
   // Else it's probably just noise.
         
   cmucam2_get("TC 200 240 0 40 0 40", 'T', packet, false);
-  
-  //WALL FOLLOWING
-  rffIR = analogRead(RIGHT_FRONT_FACING_IR_PIN);
-  rfIR = analogRead(RIGHT_FACING_IR_PIN);
+ 
+ 
+  //CODE FOR CONE TRACKING
+  // Read incoming value from packet 6 (packet 6 = can I see ANY pixels I want?)
   cIR = analogRead(CENTER_IR_PIN);
-  lfIR = analogRead(LEFT_FACING_IR_PIN);
-  lffIR = analogRead(LEFT_FRONT_FACING_IR_PIN);
   
-
-  if(rightWheel.attached() == 0){
-    if(rffIR >=150){
-      rightWheel.attach(6);
-    }
-  }
-  
-  if(wallFound == 1 && cIR >= 165){
-   //if following a wall and encounters an inside curve 
-      //rightWheel.detach();
+   if (rightWheel.attached() == 1){
+    if(/*packet[6] > 0 && */cIR >= 250){
+      //If the cone is immediately infront of me
       rightWheel.detach();
-      //rightWheel.write(150);
-      leftWheel.write(150);
+      leftWheel.detach();      
+     }
+    else if(packet[6] > 0 && cIR < 250 && packet[7] >= 20){
+      // If I can, drive straight
+      rightWheel.write(70);
+      leftWheel.write(115);   
     }
-  
-  if(rffIR >= 195 && lfIR >= 145 && cIR < 165){
-  //if right front and the left find a wall
-    //Serial.println(" ");
-    wallFound = 1;
-    rightWheel.write(move_foward_right);
-    leftWheel.write(move_foward_left); 
-  }
-  
-  if(rffIR >= 275 && lfIR < 145){
-        rightWheel.detach();
-      //rightWheel.write(150);
-      leftWheel.write(150);
-  }
-    
-
-  /*
-  if(rffIR >= 190 && lfIR >= 145){
-      wallFound = 1;
-      rightWheel.write(move_foward_right);
-      leftWheel.write(move_foward_left);
-  }*/
-  
-  if(rffIR < 250 && lfIR < 150 && lffIR < 250 &&  rfIR < 150 && cIR < 165){
-    //niether front finds a wall 
-    
-    //and hasnt found a wall yet
-    if(wallFound == 0){
-      //search for wall
-      
-      rightWheel.write(move_foward_right);
-      leftWheel.write(move_foward_left);
-    }
-    
-    //and has already found a wall
-    if(wallFound == 1){
-      //turn left
-      
+    else{
+      // No blob found start looking for a blob
       tickCounter = rightWW;
-      tickCounter2 = tickCounter + 5;
-      
-      while(tickCounter < tickCounter2){
-        rightWheel.write(left_turn_right+3);
-        leftWheel.write(left_turn_left);
-        tickCounter++;
-      }
-      
-
-    }
-  }
-   if(rffIR > 300 || lfIR > 150){   
-     wallFound = 1;  
-     tickCounter = rightWW;
-     tickCounter2 = tickCounter + 5;
-      
-      while(tickCounter < tickCounter2){
-        rightWheel.write(right_turn_right);
-        leftWheel.write(right_turn_left-5);
-        tickCounter++;
+      tickCounter2 = tickCounter + 15;
+        while(tickCounter<tickCounter2){
+          rightWheel.write(30);
+          leftWheel.write(0);
+          tickCounter++;
        }
-        
+    }      
   }
-  
+  else{
+    if(/*packet[6] > 0 && */cIR >= 250 ){
+      rightWheel.detach();
+      leftWheel.detach();
+    }
+    else if(packet[6] > 0 && cIR < 250){
+      // If I can, drive straight with no cone infront
+
+      // Attach servos
+      rightWheel.attach(6);
+      leftWheel.attach(11);
+      
+      rightWheel.write(70);
+      leftWheel.write(115);   
+    }
+    else{
+      // No blob found start looking for a blob
+      tickCounter = rightWW;
+      tickCounter2 = tickCounter + 15;    
+      //stopped = 0;
+      // Attach servos
+      rightWheel.attach(6);
+      leftWheel.attach(11);
+        while(tickCounter<tickCounter2){
+          rightWheel.write(30);
+          leftWheel.write(0);
+          tickCounter++;
+       }
+    } 
+  }
+
+
 
   // Read values from IR sensors
   rffIR = analogRead(RIGHT_FRONT_FACING_IR_PIN);
@@ -459,7 +445,6 @@ void loop()
   // Here is some debugging code which will print out the packets
   // received.
   /*
-  
   
   Serial.print(packet[0], DEC);    // MEAN X
   Serial.print(" ");
@@ -473,25 +458,25 @@ void loop()
   Serial.print(" ");
   Serial.print(packet[5], DEC);    // MAX Y
   Serial.print(" ");
+  */
   Serial.print(packet[6], DEC);    // NUM PIXELS
-  Serial.print(" ");
-  Serial.print(packet[7], DEC);    // CONFIDENCE
+  Serial.print(" Packet 6");
+  /*Serial.print(packet[7], DEC);    // CONFIDENCE
   Serial.print("LW ");
   Serial.print(leftWW, DEC);       // left wheel ticks
   Serial.print(" RW ");
   Serial.print(rightWW, DEC);    // right wheel ticks
-  */
-  //Serial.print("right front facing ir ");
-  //Serial.println(rffIR, DEC);    // right front facing ir 
- /* Serial.print("right front ir ");
+  Serial.print(" ");
+  Serial.print(rffIR, DEC);    // right front facing ir 
+  Serial.print(" ");
   Serial.print(rfIR, DEC);    // right front ir 
-  Serial.print("center ir ");
-  
+  Serial.print(" ");
+  */
   Serial.print(cIR, DEC);    // center ir 
-  Serial.println("left facing ir ");
-
+  Serial.println(" Center IR ");
+  /*
   Serial.print(lfIR, DEC);    // left facing ir 
-  Serial.print("left front facing ir ");
+  Serial.print(" ");
   Serial.println(lffIR, DEC);    // left front facing ir 
   */
 }
