@@ -392,49 +392,38 @@ void loop()
     wallFound = 1;
     rightWheel.write(move_foward_right);
     leftWheel.write(move_foward_left); 
-  }
+    }
   
   if(rffIR >= 275 && lfIR < 145){
         rightWheel.detach();
       //rightWheel.write(150);
       leftWheel.write(150);
-  }
+    }
     
-
-  /*
-  if(rffIR >= 190 && lfIR >= 145){
-      wallFound = 1;
-      rightWheel.write(move_foward_right);
-      leftWheel.write(move_foward_left);
-  }*/
-  
   if(rffIR < 250 && lfIR < 150 && lffIR < 250 &&  rfIR < 150 && cIR < 165){
-    //niether front finds a wall 
-    
-    //and hasnt found a wall yet
-    if(wallFound == 0){
-      //search for wall
-      
-      rightWheel.write(move_foward_right);
-      leftWheel.write(move_foward_left);
-    }
-    
-    //and has already found a wall
-    if(wallFound == 1){
-      //turn left
-      
-      tickCounter = rightWW;
-      tickCounter2 = tickCounter + 5;
-      
-      while(tickCounter < tickCounter2){
-        rightWheel.write(left_turn_right+3);
-        leftWheel.write(left_turn_left);
-        tickCounter++;
+        //niether front finds a wall 
+        
+        //and hasnt found a wall yet
+        if(wallFound == 0){
+          //search for wall
+          
+          rightWheel.write(move_foward_right);
+          leftWheel.write(move_foward_left);
+        }
+        
+        //and has already found a wall
+        if(wallFound == 1){
+          //turn left      
+          tickCounter = rightWW;
+          tickCounter2 = tickCounter + 5;
+          
+            while(tickCounter < tickCounter2){
+              rightWheel.write(left_turn_right+3);
+              leftWheel.write(left_turn_left);
+              tickCounter++;
+            }
+          }
       }
-      
-
-    }
-  }
    if(rffIR > 300 || lfIR > 150){   
      wallFound = 1;  
      tickCounter = rightWW;
@@ -444,9 +433,8 @@ void loop()
         rightWheel.write(right_turn_right);
         leftWheel.write(right_turn_left-5);
         tickCounter++;
-       }
-        
-  }
+       }       
+    }
   
 
   // Read values from IR sensors

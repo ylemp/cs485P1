@@ -44,6 +44,19 @@ const int CENTER_IR_PIN = 2;
 const int LEFT_FACING_IR_PIN = 3;
 const int LEFT_FRONT_FACING_IR_PIN = 4;
 
+
+int wallFound = 0;
+
+int left_turn_left = 95;
+int left_turn_right = 60;
+
+int right_turn_left = 140-20-10;
+int right_turn_right = 85;
+
+int move_foward_left = 100-5;
+int move_foward_right = 80+5-4;
+
+
 int rffIR = 0;
 int rfIR = 0;
 int cIR = 0;
@@ -374,69 +387,71 @@ void loop()
   // Else it's probably just noise.
         
   cmucam2_get("TC 200 240 0 40 0 40", 'T', packet, false);
-   //cmucam2_get("TC 200 255 0 40 0 40", 'T', packet, false);
-
- 
-  //CODE FOR CONE TRACKING
-  // Read incoming value from packet 6 (packet 6 = can I see ANY pixels I want?)
+  // Read values from IR sensors
+  rffIR = analogRead(RIGHT_FRONT_FACING_IR_PIN);
+  rfIR = analogRead(RIGHT_FACING_IR_PIN);
   cIR = analogRead(CENTER_IR_PIN);
+  lfIR = analogRead(LEFT_FACING_IR_PIN);
+  lffIR = analogRead(LEFT_FRONT_FACING_IR_PIN);
   
-   if (rightWheel.attached() == 1){
-    if(packet[6] > 20 && cIR >= 150){
-      //If the cone is immediately infront of me
-      rightWheel.detach();
-      leftWheel.detach();      
-     }
-    else if(/*packet[6] > 0 &&*/ cIR < 150 && packet[7] >= 45){
+
+  //search
+  //if found blob go to blob
+  //if wall, wall follow
+  
+  if(cIR > 150 && (packet[7] >= 100 && packet[6] > 140)){
+    rightWheel.detach();
+    leftWheel.detach();
+  }
+  //TESET
+    if(rightWheel.attached() == 0){
+      if(rffIR >=150){
+        rightWheel.attach(6);
+      }
+    }
+
+      if(cIR >= 165){
+       //if following a wall and encounters an inside curve 
+          //rightWheel.detach();
+          rightWheel.detach();
+          //rightWheel.write(150);
+          leftWheel.write(150);
+        }
+      
+       if(rffIR > 300 || lfIR > 150){   
+         wallFound = 1;  
+         tickCounter = rightWW;
+         tickCounter2 = tickCounter + 5;
+          
+          while(tickCounter < tickCounter2){
+            rightWheel.write(right_turn_right);
+            leftWheel.write(right_turn_left-5);
+            tickCounter++;
+           }       
+        }
+    
+    //TEST
+   else if(cIR < 150 && (packet[7] >= 45 || packet[6] > 16)){
       // If I can, drive straight
       rightWheel.write(80);
       leftWheel.write(105);   
     }
+    
     else{
       // No blob found start looking for a blob
       tickCounter = rightWW;
       tickCounter2 = tickCounter + 15;
         while(tickCounter<tickCounter2){
-          rightWheel.write(50);
-          leftWheel.write(0);
+          rightWheel.write(60);
+          leftWheel.write(95);
           tickCounter++;
        }
-    }      
-  }
-  else{
-    //restart from blob being found and moved awa
-    if(/*packet[6] > 0 && */cIR >= 150 ){
-      rightWheel.detach();
-      leftWheel.detach();
-    }
-    else if(packet[6] > 0 && cIR < 150){
-      // If I can, drive straight with no cone infront
-
-      // Attach servos
-      rightWheel.attach(6);
-      leftWheel.attach(11);
-      
-      rightWheel.write(80);
-      leftWheel.write(105);   
-    }
-    else{
-      // No blob found start looking for a blob
-      tickCounter = rightWW;
-      tickCounter2 = tickCounter + 15;    
-      //stopped = 0;
-      // Attach servos
-      rightWheel.attach(6);
-      leftWheel.attach(11);
-        while(tickCounter<tickCounter2){
-          rightWheel.write(50);
-          leftWheel.write(0);
-          tickCounter++;
-       }
-    } 
-  }
+    }       
 
 
-
+   
+   
+   
   // Read values from IR sensors
   rffIR = analogRead(RIGHT_FRONT_FACING_IR_PIN);
   rfIR = analogRead(RIGHT_FACING_IR_PIN);
@@ -461,10 +476,11 @@ void loop()
   Serial.print(packet[5], DEC);    // MAX Y
   Serial.print(" ");
   */
+  Serial.print(" Packet 6: ");
   Serial.print(packet[6], DEC);    // NUM PIXELS
-  Serial.print(" Packet 6");
-  /*Serial.print(packet[7], DEC);    // CONFIDENCE
-  Serial.print("LW ");
+  Serial.print("    Packet 7: ");
+  Serial.println(packet[7], DEC);    // CONFIDENCE
+  /*Serial.print("LW ");
   Serial.print(leftWW, DEC);       // left wheel ticks
   Serial.print(" RW ");
   Serial.print(rightWW, DEC);    // right wheel ticks
@@ -473,10 +489,10 @@ void loop()
   Serial.print(" ");
   Serial.print(rfIR, DEC);    // right front ir 
   Serial.print(" ");
-  */
+  
   Serial.print(cIR, DEC);    // center ir 
   Serial.println(" Center IR ");
-  /*
+  
   Serial.print(lfIR, DEC);    // left facing ir 
   Serial.print(" ");
   Serial.println(lffIR, DEC);    // left front facing ir 

@@ -387,7 +387,7 @@ void loop()
       rightWheel.detach();
       leftWheel.detach();      
      }
-    else if(/*packet[6] > 0 &&*/ cIR < 150 && packet[7] >= 45){
+    else if(/*packet[6] > 0 &&*/ cIR < 150 && packet[7] >= 30){
       // If I can, drive straight
       rightWheel.write(80);
       leftWheel.write(105);   
@@ -404,7 +404,6 @@ void loop()
     }      
   }
   else{
-    //restart from blob being found and moved awa
     if(/*packet[6] > 0 && */cIR >= 150 ){
       rightWheel.detach();
       leftWheel.detach();
