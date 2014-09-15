@@ -381,15 +381,15 @@ void loop()
   cIR = analogRead(CENTER_IR_PIN);
   
    if (rightWheel.attached() == 1){
-    if(/*packet[6] > 0 && */cIR >= 250){
+    if(/*packet[6] > 0 && */cIR >= 150){
       //If the cone is immediately infront of me
       rightWheel.detach();
       leftWheel.detach();      
      }
-    else if(packet[6] > 0 && cIR < 250 && packet[7] >= 20){
+    else if(/*packet[6] > 0 &&*/ cIR < 150 && packet[7] >= 20){
       // If I can, drive straight
-      rightWheel.write(70);
-      leftWheel.write(115);   
+      rightWheel.write(80);
+      leftWheel.write(105);   
     }
     else{
       // No blob found start looking for a blob
@@ -403,19 +403,19 @@ void loop()
     }      
   }
   else{
-    if(/*packet[6] > 0 && */cIR >= 250 ){
+    if(/*packet[6] > 0 && */cIR >= 150 ){
       rightWheel.detach();
       leftWheel.detach();
     }
-    else if(packet[6] > 0 && cIR < 250){
+    else if(packet[6] > 0 && cIR < 150){
       // If I can, drive straight with no cone infront
 
       // Attach servos
       rightWheel.attach(6);
       leftWheel.attach(11);
       
-      rightWheel.write(70);
-      leftWheel.write(115);   
+      rightWheel.write(80);
+      leftWheel.write(105);   
     }
     else{
       // No blob found start looking for a blob
