@@ -46,10 +46,13 @@ const int LEFT_FACING_IR_PIN = 3;
 const int LEFT_FRONT_FACING_IR_PIN = 4;
 
 
-int rightMoveSpeed = 20;
-int leftMoveSpeed = 160;
+int rightMoveSpeed = 85; 
+int leftMoveSpeed = 95;
 
-float  average = 0.0;
+int d = 0;
+int runningd = 0;
+
+float average = 0.0;
 
 int error = 0;
  
@@ -338,7 +341,13 @@ void resetCamera()
     }
   }
 
-/*----------------FUNCTIONS------------------- */
+/*----------------FUNCTIONS------------------------------------------------------------------------------------------------- */
+
+
+void turn(){
+  
+}
+
 
 void turnRight(){
   
@@ -351,36 +360,63 @@ void turnRight(){
         leftMoveSpeed = 160;
     }
   error = 0;
+  d = 0;
+  runningd = 0;
 }
 
 void go(){
   leftWheel.write(leftMoveSpeed);
   rightWheel.write(rightMoveSpeed);
+  /*
   
     if (tempLeftWW < tempRightWW){
 	//slow down right wheel, speed up left
-        //closer to 90
-        
-        
+        //closer to 90       
         leftMoveSpeed++;
         rightMoveSpeed++;
         rightWheel.write(rightMoveSpeed);
         leftWheel.write(leftMoveSpeed);
-        error--;        
-    }
-	
+    }	
   if (tempLeftWW > tempRightWW){	
 	//slow down left wheel, speed up right
         //closer to 90 for slower
         //away from 90 for faster 
-
         rightMoveSpeed--;         
         leftMoveSpeed--;
         leftWheel.write(leftMoveSpeed);
         rightWheel.write(rightMoveSpeed);
-        error++;        
-    }    
+    }    */
     
+}
+
+void DiffCalc(int d){
+    if(d > 0){
+      //LW is larger
+      //speed up right
+      if(rightMoveSpeed<0){
+        rightWheel.write(0);
+      }
+      else{
+        rightMoveSpeed--;
+        rightWheel.write(rightMoveSpeed);
+       }
+    }
+    else if(d < 0){
+      //RW is larger
+      //speed up left
+       if(leftMoveSpeed > 180){
+        leftWheel.write(180);
+       }
+       else{
+        leftMoveSpeed++;
+        leftWheel.write(leftMoveSpeed);
+       }
+    }
+    else{
+      //its balanced
+        leftWheel.write(leftMoveSpeed);
+        rightWheel.write(rightMoveSpeed);      
+    }
 }
 
 
@@ -437,7 +473,12 @@ void loop()
     
     if(average < 500){
       temp = average + 100 + 10;
-      go();
+      d = tempLeftWW - tempRightWW;
+      runningd = runningd + (tempLeftWW - tempRightWW);
+
+      DiffCalc(d);
+      
+      SoftwareServo::refresh();
     }
     
     if(average >= 500){
@@ -494,9 +535,18 @@ void loop()
   Serial.print("  lffIR: ");
   Serial.println(lffIR, DEC);    // left front facing ir 
     */
-  Serial.print("leftMoveSpeed: ");
-  Serial.print(leftMoveSpeed, DEC);
-  Serial.print("  rightMoveSpeed: ");
+
+  Serial.print("  tempL: ");
+  Serial.print(tempLeftWW, DEC); 
+  Serial.print("  tempR: ");
+  Serial.print(tempRightWW, DEC); 
+  Serial.print("  d: ");
+  Serial.print(d, DEC); 
+  Serial.print("  runningd: ");
+  Serial.print(runningd, DEC); 
+  Serial.print("  LeftMS: ");
+  Serial.print(leftMoveSpeed, DEC); 
+  Serial.print("  RightMS: ");
   Serial.println(rightMoveSpeed, DEC); 
   
 }

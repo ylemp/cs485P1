@@ -384,19 +384,18 @@ void loop()
       rightWheel.detach();
       //rightWheel.write(150);
       leftWheel.write(150);
+      
     }
   
   if(rffIR >= 195 && lfIR >= 145 && cIR < 165){
   //if right front and the left find a wall
-    //Serial.println(" ");
     wallFound = 1;
     rightWheel.write(move_foward_right);
     leftWheel.write(move_foward_left); 
     }
   
   if(rffIR >= 275 && lfIR < 145){
-        rightWheel.detach();
-      //rightWheel.write(150);
+      rightWheel.detach();
       leftWheel.write(150);
     }
     

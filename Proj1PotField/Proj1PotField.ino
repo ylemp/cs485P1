@@ -416,8 +416,8 @@ void loop()
          tickCounter2 = tickCounter + 5;
           
           while(tickCounter < tickCounter2){
-            rightWheel.write(right_turn_right);
-            leftWheel.write(right_turn_left-5);
+            rightWheel.write(90);
+            leftWheel.write(120);
             tickCounter++;
            }       
         }           
@@ -428,8 +428,8 @@ void loop()
          tickCounter2 = tickCounter + 5;
           
           while(tickCounter < tickCounter2){
-            rightWheel.write(right_turn_right);
-            leftWheel.write(right_turn_left-5);
+            rightWheel.write(60);
+            leftWheel.write(90);
             tickCounter++;
            }       
         }
@@ -452,7 +452,7 @@ void loop()
           tickCounter++;
        }
       }
-      else{
+      if(turnDirection == 1){
         //turns right
       tickCounter = rightWW;
       tickCounter2 = tickCounter + 15;

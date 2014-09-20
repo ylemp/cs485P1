@@ -382,12 +382,12 @@ void loop()
   cIR = analogRead(CENTER_IR_PIN);
   
    if (rightWheel.attached() == 1){
-    if(packet[6] > 20 && cIR >= 150){
+    if(cIR >= 100 && (packet[7] >= 45 || packet[6] >= 10)){
       //If the cone is immediately infront of me
       rightWheel.detach();
       leftWheel.detach();      
      }
-    else if(/*packet[6] > 0 &&*/ cIR < 150 && packet[7] >= 45){
+    else if( cIR < 100 && packet[7] >= 45 ){
       // If I can, drive straight
       rightWheel.write(80);
       leftWheel.write(105);   
@@ -405,11 +405,11 @@ void loop()
   }
   else{
     //restart from blob being found and moved awa
-    if(/*packet[6] > 0 && */cIR >= 150 ){
+    if( cIR >= 100 ){
       rightWheel.detach();
       leftWheel.detach();
     }
-    else if(packet[6] > 0 && cIR < 150){
+    else if(packet[6] > 0 && cIR < 100){
       // If I can, drive straight with no cone infront
 
       // Attach servos
@@ -461,10 +461,11 @@ void loop()
   Serial.print(packet[5], DEC);    // MAX Y
   Serial.print(" ");
   */
+  Serial.print(" Packet 6: ");
   Serial.print(packet[6], DEC);    // NUM PIXELS
-  Serial.print(" Packet 6");
-  /*Serial.print(packet[7], DEC);    // CONFIDENCE
-  Serial.print("LW ");
+  Serial.print(" Packet 7: ");
+  Serial.print(packet[7], DEC);    // CONFIDENCE
+  /*Serial.print("LW ");
   Serial.print(leftWW, DEC);       // left wheel ticks
   Serial.print(" RW ");
   Serial.print(rightWW, DEC);    // right wheel ticks
@@ -474,8 +475,8 @@ void loop()
   Serial.print(rfIR, DEC);    // right front ir 
   Serial.print(" ");
   */
-  Serial.print(cIR, DEC);    // center ir 
-  Serial.println(" Center IR ");
+  Serial.print(" Center IR ");
+  Serial.println(cIR, DEC);
   /*
   Serial.print(lfIR, DEC);    // left facing ir 
   Serial.print(" ");
