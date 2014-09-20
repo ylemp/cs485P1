@@ -29,6 +29,7 @@
 #include <SoftwareServo.h>
 #include <AltSoftSerial.h>
 
+
 #define ALTSERIAL 1
 
 // Microcontroller pin set up
@@ -45,16 +46,13 @@ const int LEFT_FACING_IR_PIN = 3;
 const int LEFT_FRONT_FACING_IR_PIN = 4;
 
 
-int wallFound = 0;
+int rightMoveSpeed = 20;
+int leftMoveSpeed = 160;
 
-int left_turn_left = 95;
-int left_turn_right = 60;
+float  average = 0.0;
 
-int right_turn_left = 140-20-10;
-int right_turn_right = 85;
-
-int move_foward_left = 100-5;
-int move_foward_right = 80+5-4;
+int error = 0;
+ 
 
 
 int rffIR = 0;
@@ -64,7 +62,8 @@ int lfIR = 0;
 int lffIR = 0;
 
 // Global variables to count wheel watcher tics
-int rightWW, leftWW;
+int rightWW, leftWW, temp;
+int tempRightWW, tempLeftWW;
 
 int tickCounter, tickCounter2;
 
@@ -273,11 +272,13 @@ boolean cmucam2_get(char* cmd, char in, unsigned char *rtrn, boolean verbose=fal
 void _updateRightEncoder() {
   int8_t adjustment = (((digitalRead(RIGHT_ENCODER_PIN) ^ 0)<<1)-1);
   rightWW += adjustment;
+  tempRightWW += adjustment;
 }
 
 void _updateLeftEncoder() {
   int8_t adjustment = ((((!digitalRead(LEFT_ENCODER_PIN)) ^ 0)<<1)-1);
   leftWW += adjustment;
+  tempLeftWW += adjustment;
 }
 
 
@@ -337,6 +338,50 @@ void resetCamera()
     }
   }
 
+/*----------------FUNCTIONS------------------- */
+
+void turnRight(){
+  
+    rightWheel.write(90);
+    leftWheel.write(leftMoveSpeed);
+    if(tempLeftWW>temp){        
+        tempLeftWW = 0;    
+        tempRightWW = 0; 
+        rightMoveSpeed = 20;
+        leftMoveSpeed = 160;
+    }
+  error = 0;
+}
+
+void go(){
+  leftWheel.write(leftMoveSpeed);
+  rightWheel.write(rightMoveSpeed);
+  
+    if (tempLeftWW < tempRightWW){
+	//slow down right wheel, speed up left
+        //closer to 90
+        
+        
+        leftMoveSpeed++;
+        rightMoveSpeed++;
+        rightWheel.write(rightMoveSpeed);
+        leftWheel.write(leftMoveSpeed);
+        error--;        
+    }
+	
+  if (tempLeftWW > tempRightWW){	
+	//slow down left wheel, speed up right
+        //closer to 90 for slower
+        //away from 90 for faster 
+
+        rightMoveSpeed--;         
+        leftMoveSpeed--;
+        leftWheel.write(leftMoveSpeed);
+        rightWheel.write(rightMoveSpeed);
+        error++;        
+    }    
+    
+}
 
 
 void setup()
@@ -387,65 +432,18 @@ void loop()
   // Else it's probably just noise.
         
   cmucam2_get("TC 200 240 0 40 0 40", 'T', packet, false);
-  // Read values from IR sensors
-  rffIR = analogRead(RIGHT_FRONT_FACING_IR_PIN);
-  rfIR = analogRead(RIGHT_FACING_IR_PIN);
-  cIR = analogRead(CENTER_IR_PIN);
-  lfIR = analogRead(LEFT_FACING_IR_PIN);
-  lffIR = analogRead(LEFT_FRONT_FACING_IR_PIN);
   
-
-  //search
-  //if found blob go to blob
-  //if wall, wall follow
-  
-  if(cIR > 150 && (packet[7] >= 100 && packet[6] > 140)){
-    rightWheel.detach();
-    leftWheel.detach();
-  }
-    if(rightWheel.attached() == 0){
-      if(rffIR >=150){
-        rightWheel.attach(6);
-      }
+    average =  (int)(tempRightWW + tempLeftWW)/2;
+    
+    if(average < 500){
+      temp = average + 100 + 10;
+      go();
     }
-      if(cIR >= 165){
-       //if following a wall and encounters an inside curve 
-          //rightWheel.detach();
-          rightWheel.detach();
-          //rightWheel.write(150);
-          leftWheel.write(150);
-        }
-      
-       if(rffIR > 300 || lfIR > 150){   
-         wallFound = 1;  
-         tickCounter = rightWW;
-         tickCounter2 = tickCounter + 5;
-          
-          while(tickCounter < tickCounter2){
-            rightWheel.write(right_turn_right);
-            leftWheel.write(right_turn_left-5);
-            tickCounter++;
-           }       
-        }   
-   else if(cIR < 150 && (packet[7] >= 45 || packet[6] > 16)){
-      // If I can, drive straight
-      rightWheel.write(80);
-      leftWheel.write(105);   
-    }    
-    else{
-      // No blob found start looking for a blob
-      tickCounter = rightWW;
-      tickCounter2 = tickCounter + 15;
-        while(tickCounter<tickCounter2){
-          rightWheel.write(60);
-          leftWheel.write(95);
-          tickCounter++;
-       }
-    }       
-
-
-   
-   
+    
+    if(average >= 500){
+      turnRight(); 
+    }
+     
    
   // Read values from IR sensors
   rffIR = analogRead(RIGHT_FRONT_FACING_IR_PIN);
@@ -469,29 +467,38 @@ void loop()
   Serial.print(packet[4], DEC);    // MAX X
   Serial.print(" ");
   Serial.print(packet[5], DEC);    // MAX Y
-  Serial.print(" ");
-  */
+  Serial.print(" "); 
   Serial.print(" Packet 6: ");
   Serial.print(packet[6], DEC);    // NUM PIXELS
   Serial.print("    Packet 7: ");
-  Serial.println(packet[7], DEC);    // CONFIDENCE
-  /*Serial.print("LW ");
+  Serial.println(packet[7], DEC);  // CONFIDENCE
+  
+  Serial.print("LW: ");
   Serial.print(leftWW, DEC);       // left wheel ticks
-  Serial.print(" RW ");
-  Serial.print(rightWW, DEC);    // right wheel ticks
-  Serial.print(" ");
+  Serial.print("  RW: ");
+  Serial.println(rightWW, DEC);    // right wheel ticks
+
+  Serial.print("  rffIR: ");
   Serial.print(rffIR, DEC);    // right front facing ir 
-  Serial.print(" ");
+
+  Serial.print("  rfIR: ");
+
   Serial.print(rfIR, DEC);    // right front ir 
-  Serial.print(" ");
-  
+
+  Serial.print("  cIR: ");
   Serial.print(cIR, DEC);    // center ir 
-  Serial.println(" Center IR ");
   
+  Serial.print("  lfIR: ");
   Serial.print(lfIR, DEC);    // left facing ir 
-  Serial.print(" ");
+
+  Serial.print("  lffIR: ");
   Serial.println(lffIR, DEC);    // left front facing ir 
-  */
+    */
+  Serial.print("leftMoveSpeed: ");
+  Serial.print(leftMoveSpeed, DEC);
+  Serial.print("  rightMoveSpeed: ");
+  Serial.println(rightMoveSpeed, DEC); 
+  
 }
 
 

@@ -46,6 +46,9 @@ const int LEFT_FRONT_FACING_IR_PIN = 4;
 
 
 int wallFound = 0;
+ 
+int turnDirection = 0;
+
 
 int left_turn_left = 95;
 int left_turn_right = 60;
@@ -403,21 +406,12 @@ void loop()
     rightWheel.detach();
     leftWheel.detach();
   }
-    if(rightWheel.attached() == 0){
-      if(rffIR >=150){
-        rightWheel.attach(6);
-      }
-    }
-      if(cIR >= 165){
-       //if following a wall and encounters an inside curve 
-          //rightWheel.detach();
-          rightWheel.detach();
-          //rightWheel.write(150);
-          leftWheel.write(150);
-        }
-      
-       if(rffIR > 300 || lfIR > 150){   
-         wallFound = 1;  
+  
+  if(rffIR > 300 || lffIR > 300){
+   //encounter a wall 
+       if(rffIR > 300 || lfIR > 150){
+      //goes right   
+         turnDirection = 1;  
          tickCounter = rightWW;
          tickCounter2 = tickCounter + 5;
           
@@ -426,22 +420,50 @@ void loop()
             leftWheel.write(right_turn_left-5);
             tickCounter++;
            }       
-        }   
+        }           
+        if(lffIR > 300 || rfIR > 150){
+        //goes left   
+         turnDirection = 0;  
+         tickCounter = rightWW;
+         tickCounter2 = tickCounter + 5;
+          
+          while(tickCounter < tickCounter2){
+            rightWheel.write(right_turn_right);
+            leftWheel.write(right_turn_left-5);
+            tickCounter++;
+           }       
+        }
+}
    else if(cIR < 150 && (packet[7] >= 45 || packet[6] > 16)){
       // If I can, drive straight
-      rightWheel.write(80);
-      leftWheel.write(105);   
+      rightWheel.write(20);
+      leftWheel.write(160);   
     }    
     else{
       // No blob found start looking for a blob
+      
+      if(turnDirection == 0){
+        //turns left
       tickCounter = rightWW;
       tickCounter2 = tickCounter + 15;
         while(tickCounter<tickCounter2){
           rightWheel.write(60);
-          leftWheel.write(95);
+          leftWheel.write(90);
           tickCounter++;
        }
-    }       
+      }
+      else{
+        //turns right
+      tickCounter = rightWW;
+      tickCounter2 = tickCounter + 15;
+        while(tickCounter<tickCounter2){
+          rightWheel.write(90);
+          leftWheel.write(120);
+          tickCounter++;
+       }
+      }
+
+  }       
 
 
    
